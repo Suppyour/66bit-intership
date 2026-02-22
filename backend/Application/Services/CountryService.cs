@@ -37,13 +37,33 @@ public class CountryService : ICountryService
         return dtos;
     }
 
-    public Task UpdateCountryAsync(CountryDto dto)
+    public async Task UpdateCountryAsync(CountryDto dto)
     {
-        throw new NotImplementedException();
+        var country = await _repository.GetByIdAsync(dto.Id);
+        if (country == null) return;
+
+        country.Name = dto.Name;
+
+        await _repository.UpdateAsync(country);
     }
 
-    public Task DeleteCountryAsync(Guid id)
+    public async Task DeleteCountryAsync(Guid id)
     {
-        throw new NotImplementedException();
+        var country = await _repository.GetByIdAsync(id);
+        if (country != null)
+        {
+            await _repository.DeleteAsync(country);
+        }
+    }
+
+    public async Task<CountryDto?> GetCountryByIdAsync(Guid id)
+    {
+        var c = await _repository.GetByIdAsync(id);
+        if (c == null) return null;
+
+        return new CountryDto(
+            c.Id,
+            c.Name
+        );
     }
 }

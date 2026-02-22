@@ -28,4 +28,27 @@ public class ItemTypeController : ControllerBase
         var result = await _service.GetAllItemTypesAsync();
         return Ok(result);
     }
+
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetById(Guid id)
+    {
+        var result = await _service.GetItemTypeByIdAsync(id);
+        if (result == null) return NotFound();
+        return Ok(result);
+    }
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Update(Guid id, [FromBody] ItemTypeDto dto)
+    {
+        if (id != dto.Id) return BadRequest("ID mismatch");
+        await _service.UpdateItemTypeAsync(dto);
+        return NoContent();
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        await _service.DeleteItemTypeAsync(id);
+        return NoContent();
+    }
 }

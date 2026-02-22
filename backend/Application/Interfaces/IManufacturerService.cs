@@ -7,5 +7,6 @@ public interface IManufacturerService
     Task<Guid> CreateManufacturerAsync(ManufacturerDto dto);
     Task UpdateManufacturerAsync(ManufacturerDto dto);
     Task DeleteManufacturerAsync(Guid id);
+    Task<ManufacturerDto?> GetManufacturerByIdAsync(Guid id);
     Task<List<ManufacturerDto>> GetAllManufacturersAsync();
 }

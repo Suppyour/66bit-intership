@@ -28,4 +28,27 @@ public class ManufacturerController : ControllerBase
         var result = await _service.GetAllManufacturersAsync();
         return Ok(result);
     }
+
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetById(Guid id)
+    {
+        var result = await _service.GetManufacturerByIdAsync(id);
+        if (result == null) return NotFound();
+        return Ok(result);
+    }
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Update(Guid id, [FromBody] ManufacturerDto dto)
+    {
+        if (id != dto.Id) return BadRequest("ID mismatch");
+        await _service.UpdateManufacturerAsync(dto);
+        return NoContent();
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        await _service.DeleteManufacturerAsync(id);
+        return NoContent();
+    }
 }

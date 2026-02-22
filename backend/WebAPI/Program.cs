@@ -22,6 +22,10 @@ builder.Services.AddScoped<IItemTypeService, ItemTypeService>();
 builder.Services.AddScoped<ICountryRepository, CountryRepository>();
 builder.Services.AddScoped<ICountryService, CountryService>();
 
+builder.Services.AddScoped<IItemRepository, ItemRepository>();
+builder.Services.AddScoped<IItemService, ItemService>();
+
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())

@@ -28,4 +28,27 @@ public class CountryController : ControllerBase
         var result = await _service.GetAllCountriesAsync();
         return Ok(result);
     }
+
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetById(Guid id)
+    {
+        var result = await _service.GetCountryByIdAsync(id);
+        if (result == null) return NotFound();
+        return Ok(result);
+    }
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Update(Guid id, [FromBody] CountryDto dto)
+    {
+        if (id != dto.Id) return BadRequest("ID mismatch");
+        await _service.UpdateCountryAsync(dto);
+        return NoContent();
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        await _service.DeleteCountryAsync(id);
+        return NoContent();
+    }
 }

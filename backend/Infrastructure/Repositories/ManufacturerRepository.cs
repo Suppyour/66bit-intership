@@ -36,7 +36,7 @@ public class ManufacturerRepository : IManufacturerRepository
         await _context.SaveChangesAsync();
     }
 
-    public async Task<Manufacturer> GetByIdAsync(Guid id)
+    public async Task<Manufacturer?> GetByIdAsync(Guid id)
     {
         return await _context.Manufacturers.FindAsync(id);
     }

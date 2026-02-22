@@ -41,13 +41,37 @@ public class ManufacturerService : IManufacturerService
         return dtos;
     }
 
-    public Task UpdateManufacturerAsync(ManufacturerDto dto)
+    public async Task UpdateManufacturerAsync(ManufacturerDto dto)
     {
-        throw new NotImplementedException();
+        var manufacturer = await _repository.GetByIdAsync(dto.Id);
+        if (manufacturer == null) return;
+
+        manufacturer.Name = dto.Name;
+        manufacturer.Description = dto.Description;
+
+        await _repository.UpdateAsync(manufacturer);
     }
 
-    public Task DeleteManufacturerAsync(Guid id)
+    public async Task DeleteManufacturerAsync(Guid id)
     {
-        throw new NotImplementedException();
+        var manufacturer = await _repository.GetByIdAsync(id);
+        if (manufacturer != null)
+        {
+            await _repository.DeleteAsync(manufacturer);
+        }
+    }
+
+    public async Task<ManufacturerDto?> GetManufacturerByIdAsync(Guid id)
+    {
+        var m = await _repository.GetByIdAsync(id);
+        if (m == null) return null;
+
+        return new ManufacturerDto(
+            m.Id,
+            m.Name,
+            m.Description,
+            m.CreatedDate,
+            m.ModifiedDate
+        );
     }
 }

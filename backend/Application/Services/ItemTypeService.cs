@@ -41,13 +41,37 @@ public class ItemTypeService : IItemTypeService
         return dtos;
     }
 
-    public Task UpdateItemTypeAsync(ItemTypeDto dto)
+    public async Task UpdateItemTypeAsync(ItemTypeDto dto)
     {
-        throw new NotImplementedException();
+        var itemType = await _repository.GetByIdAsync(dto.Id);
+        if (itemType == null) return;
+
+        itemType.Name = dto.Name;
+        itemType.Description = dto.Description;
+
+        await _repository.UpdateAsync(itemType);
     }
 
-    public Task DeleteItemTypeAsync(Guid id)
+    public async Task DeleteItemTypeAsync(Guid id)
     {
-        throw new NotImplementedException();
+        var itemType = await _repository.GetByIdAsync(id);
+        if (itemType != null)
+        {
+            await _repository.DeleteAsync(itemType);
+        }
+    }
+
+    public async Task<ItemTypeDto?> GetItemTypeByIdAsync(Guid id)
+    {
+        var i = await _repository.GetByIdAsync(id);
+        if (i == null) return null;
+
+        return new ItemTypeDto(
+            i.Id,
+            i.Name,
+            i.Description,
+            i.CreatedDate,
+            i.ModifiedDate
+        );
     }
 }
