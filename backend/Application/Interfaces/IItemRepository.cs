@@ -14,5 +14,8 @@ public interface IItemRepository
         Guid? typeId,
         Guid? manufacturerId);
     Task DeleteItemAsync(Item item);
+    Task<Item?> GetByIdAsync(Guid id);
+    Task UpdateAsync(Item item);
+
 }
     

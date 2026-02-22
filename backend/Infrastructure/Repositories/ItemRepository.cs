@@ -27,7 +27,7 @@ public class ItemRepository : IItemRepository
             .Include(i => i.Manufacturer)
             .Include(i => i.Country)
             .AsQueryable();
-        
+
         if (minPrice.HasValue)
         {
             query = query.Where(i => i.Price >= minPrice.Value);
@@ -41,7 +41,7 @@ public class ItemRepository : IItemRepository
         if (!string.IsNullOrWhiteSpace(searchQuery))
         {
             var searchLower = searchQuery.ToLower();
-            query = query.Where(i => 
+            query = query.Where(i =>
                 i.Model.ToLower().Contains(searchLower) ||
                 i.ItemType.Name.ToLower().Contains(searchLower) ||
                 i.Manufacturer.Name.ToLower().Contains(searchLower));
@@ -56,11 +56,28 @@ public class ItemRepository : IItemRepository
         {
             query = query.Where(i => i.ManufacturerId == manufacturerId.Value);
         }
+
         return await query.ToListAsync();
     }
 
-    public Task DeleteItemAsync(Item item)
+    public async Task<Item?> GetByIdAsync(Guid id)
     {
-        throw new NotImplementedException();
+        return await _context.Items
+            .Include(i => i.ItemType)
+            .Include(i => i.Manufacturer)
+            .Include(i => i.Country)
+            .FirstOrDefaultAsync(i => i.Id == id);
+    }
+
+    public async Task UpdateAsync(Item item)
+    {
+        _context.Items.Update(item);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task DeleteItemAsync(Item item)
+    {
+        _context.Items.Remove(item);
+        await _context.SaveChangesAsync();
     }
 }

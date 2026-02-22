@@ -8,11 +8,13 @@ public class ItemService : IItemService
 {
     private readonly IItemRepository _itemRepository;
     private readonly ICountryRepository _countryRepository;
+    private readonly IHubService _hubService;
 
-    public ItemService(IItemRepository itemRepository, ICountryRepository countryRepository)
+    public ItemService(IItemRepository itemRepository, ICountryRepository countryRepository, IHubService hubService)
     {
         _itemRepository = itemRepository;
         _countryRepository = countryRepository;
+        _hubService = hubService;
     }
 
     public async Task<Guid> CreateItemAsync(CreateItemDto dto)
@@ -41,7 +43,32 @@ public class ItemService : IItemService
         };
 
         await _itemRepository.AddAsync(item);
+        await _hubService.Change("Создан новый товар");
         return item.Id;
+    }
+
+    public async Task<ItemDto?> GetItemByIdAsync(Guid id)
+    {
+        var i = await _itemRepository.GetByIdAsync(id);
+        if (i == null) return null;
+        return new ItemDto(
+            i.Id, i.PhotoUrl, i.Model, i.Price,
+            i.Manufacturer.Name, i.ItemType.Name, i.Country.Name
+        );
+    }
+    public async Task UpdateItemAsync(Guid id, CreateItemDto dto)
+    {
+        var item = await _itemRepository.GetByIdAsync(id);
+        if (item == null) return;
+    
+        item.Model = dto.Model;
+        item.Price = dto.Price;
+        item.PhotoUrl = dto.PhotoUrl;
+        item.ItemTypeId = dto.ItemTypeId;
+        item.ManufacturerId = dto.ManufacturerId;
+        if (dto.CountryId.HasValue) 
+            item.CountryId = dto.CountryId.Value;
+        await _itemRepository.UpdateAsync(item);
     }
 
     public async Task<List<ItemDto>> GetAllFilteredAsync(
@@ -62,13 +89,13 @@ public class ItemService : IItemService
         return dtos;
     }
 
-    public Task DeleteItemAsync(Guid id)
+    public async Task DeleteItemAsync(Guid id)
     {
-        throw new NotImplementedException();
-    }
-
-    public Task UpdateItemAsync(Guid id)
-    {
-        throw new NotImplementedException();
+        var item = await _itemRepository.GetByIdAsync(id);
+        if (item != null)
+        {
+            await _itemRepository.DeleteItemAsync(item);
+            await _hubService.Change($"Удален товар {item.Model}");
+        }
     }
 }
