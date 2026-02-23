@@ -3,16 +3,15 @@ import type { FormEvent } from 'react';
 import api from '../api';
 import type { ItemDto, ManufacturerDto, CountryDto, ItemTypeDto, CreateItemDto } from '../types';
 import {
-    Typography, Box, Card, CardContent, CardMedia,
-    Grid, CircularProgress, Chip,
-    CardActions, Button, Dialog, DialogTitle, DialogContent,
+    Typography, Box, CircularProgress, Chip,
+    Button, Dialog, DialogTitle, DialogContent,
     DialogActions, TextField, MenuItem, FormControl, InputLabel, Select, InputAdornment,
-    Collapse, Paper
+    Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
-import FilterListIcon from '@mui/icons-material/FilterList';
+import * as signalR from '@microsoft/signalr';
 import SearchIcon from '@mui/icons-material/Search';
 
 export default function ItemsList() {
@@ -26,13 +25,16 @@ export default function ItemsList() {
 
 
     const [openAddModal, setOpenAddModal] = useState(false);
+    const [editingItemId, setEditingItemId] = useState<string | null>(null);
     const [openInlineCountryModal, setOpenInlineCountryModal] = useState(false);
 
 
-    const [showFilters, setShowFilters] = useState(false);
+
     const [searchQuery, setSearchQuery] = useState('');
     const [filterMan, setFilterMan] = useState('');
     const [filterType, setFilterType] = useState('');
+    const [priceFrom, setPriceFrom] = useState('');
+    const [priceTo, setPriceTo] = useState('');
 
 
     const [newItem, setNewItem] = useState<Partial<CreateItemDto>>({
@@ -41,9 +43,34 @@ export default function ItemsList() {
     });
     const [inlineCountryName, setInlineCountryName] = useState('');
 
+    const formatDate = (dateString?: string | null) => {
+        if (!dateString || dateString.startsWith('0001-01-01')) return 'Нет данных';
+        const d = new Date(dateString);
+        if (isNaN(d.getTime())) return 'Нет данных';
+        return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    };
+
     useEffect(() => {
         loadItems();
         loadDictionaries();
+
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("http://localhost:5020/hubs/store")
+            .withAutomaticReconnect()
+            .build();
+
+        connection.on("ReceiveMessage", (message) => {
+            console.log("SignalR Message:", message);
+            loadItems(); // Перезагружаем список техники при получении уведомления
+        });
+
+        connection.start()
+            .then(() => console.log("Успешно подключено к SignalR хабу"))
+            .catch(err => console.error("Ошибка подключения к SignalR:", err));
+
+        return () => {
+            connection.stop();
+        };
     }, []);
 
     const loadItems = async () => {
@@ -82,24 +109,45 @@ export default function ItemsList() {
         }
     };
 
+    const handleOpenEdit = (item: ItemDto) => {
+        const manId = manufacturers.find(m => m.name === item.manufacturer)?.id || '';
+        const typeId = itemTypes.find(t => t.name === item.itemType)?.id || '';
+        const countryId = countries.find(c => c.name === item.country)?.id || '';
+
+        setEditingItemId(item.id);
+        setNewItem({
+            model: item.model,
+            photoUrl: item.photoUrl,
+            price: item.price,
+            manufacturerId: manId,
+            itemTypeId: typeId,
+            countryId: countryId
+        });
+        setInlineCountryName('');
+        setOpenAddModal(true);
+    };
+
     const handleCreateItem = async (e: FormEvent) => {
         e.preventDefault();
         try {
-
             const dto: CreateItemDto = {
                 model: newItem.model!,
                 photoUrl: newItem.photoUrl || '',
                 price: Number(newItem.price),
                 manufacturerId: newItem.manufacturerId!,
                 itemTypeId: newItem.itemTypeId!,
-
                 countryId: inlineCountryName ? null : newItem.countryId,
                 newCountryName: inlineCountryName ? inlineCountryName : null
             };
 
-            await api.post('/item', dto);
-            setOpenAddModal(false);
+            if (editingItemId) {
+                await api.put(`/item/${editingItemId}`, dto);
+            } else {
+                await api.post('/item', dto);
+            }
 
+            setOpenAddModal(false);
+            setEditingItemId(null);
 
             setNewItem({ model: '', photoUrl: '', price: 0, manufacturerId: '', itemTypeId: '', countryId: '' });
             setInlineCountryName('');
@@ -107,21 +155,28 @@ export default function ItemsList() {
             await loadDictionaries();
             await loadItems();
         } catch (error) {
-            console.error("Ошибка при создании позиции:", error);
-            alert("Не удалось создать позицию. Проверьте заполнение всех полей.");
+            console.error("Ошибка при сохранении позиции:", error);
+            alert("Не удалось сохранить позицию. Проверьте заполнение всех полей.");
         }
     };
 
 
     const filteredItems = useMemo(() => {
         return items.filter(item => {
-            const matchQuery = item.model.toLowerCase().includes(searchQuery.toLowerCase());
+            const query = searchQuery.toLowerCase();
+            const matchQuery = item.model.toLowerCase().includes(query) ||
+                item.manufacturer.toLowerCase().includes(query) ||
+                item.itemType.toLowerCase().includes(query);
 
             const matchMan = filterMan ? item.manufacturer === filterMan : true;
             const matchType = filterType ? item.itemType === filterType : true;
-            return matchQuery && matchMan && matchType;
+
+            const matchPriceFrom = priceFrom ? item.price >= Number(priceFrom) : true;
+            const matchPriceTo = priceTo ? item.price <= Number(priceTo) : true;
+
+            return matchQuery && matchMan && matchType && matchPriceFrom && matchPriceTo;
         });
-    }, [items, searchQuery, filterMan, filterType]);
+    }, [items, searchQuery, filterMan, filterType, priceFrom, priceTo]);
 
     if (loading) {
         return (
@@ -134,98 +189,153 @@ export default function ItemsList() {
     return (
         <Box sx={{ pb: 4 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-                <Typography variant="h4" component="h1" sx={{ color: 'primary.dark' }}>
-                    Список Позиций
+                <Typography variant="h4" component="h1" sx={{ color: 'text.primary', fontWeight: 800 }}>
+                    Список техники
                 </Typography>
-                <Box sx={{ display: 'flex', gap: 2 }}>
-                    <Button variant="outlined" color="primary" startIcon={<FilterListIcon />} onClick={() => setShowFilters(!showFilters)}>
-                        Фильтры {(!showFilters && (searchQuery || filterMan || filterType)) && ' (Активны)'}
-                    </Button>
-                    <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={() => setOpenAddModal(true)}>
-                        Добавить
-                    </Button>
-                </Box>
+                <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={() => {
+                    setEditingItemId(null);
+                    setNewItem({ model: '', photoUrl: '', price: 0, manufacturerId: '', itemTypeId: '', countryId: '' });
+                    setInlineCountryName('');
+                    setOpenAddModal(true);
+                }} sx={{ borderRadius: 2 }}>
+                    Добавить технику
+                </Button>
             </Box>
 
+            <Paper elevation={0} sx={{ p: 3, mb: 4, bgcolor: '#ffffff', borderRadius: 4 }}>
+                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3, mb: 3 }}>
+                    <TextField
+                        fullWidth size="small" placeholder="Поиск по модели, типу или бренду..."
+                        variant="outlined" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                        InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon color="action" fontSize="small" /></InputAdornment> }}
+                        sx={{ flex: 2 }}
+                    />
+                    <FormControl fullWidth size="small" sx={{ flex: 1 }}>
+                        <Select displayEmpty value={filterMan} onChange={e => setFilterMan(e.target.value)} sx={{ color: filterMan ? 'text.primary' : 'text.secondary' }}>
+                            <MenuItem value="">Все производители</MenuItem>
+                            {/* Сужающийся фильтр: если выбран фильтр по типу (filterType), оставляем только тех производителей, которые есть у этого типа в общем списке */}
+                            {manufacturers.filter(m => {
+                                if (!filterType) return true;
+                                return items.some(item => item.itemType === filterType && item.manufacturer === m.name);
+                            }).map(m => <MenuItem key={m.id} value={m.name}>{m.name}</MenuItem>)}
+                        </Select>
+                    </FormControl>
+                    <FormControl fullWidth size="small" sx={{ flex: 1 }}>
+                        <Select displayEmpty value={filterType} onChange={e => setFilterType(e.target.value)} sx={{ color: filterType ? 'text.primary' : 'text.secondary' }}>
+                            <MenuItem value="">Все типы техники</MenuItem>
+                            {/* Сужающийся фильтр: если выбран фильтр по производителю (filterMan), оставляем только те ItemTypes, которые есть у этого производителя в общем списке items, иначе показываем все */}
+                            {itemTypes.filter(t => {
+                                if (!filterMan) return true;
+                                return items.some(item => item.manufacturer === filterMan && item.itemType === t.name);
+                            }).map(t => <MenuItem key={t.id} value={t.name}>{t.name}</MenuItem>)}
+                        </Select>
+                    </FormControl>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>
+                        Цена:
+                    </Typography>
+                    <TextField size="small" placeholder="От" type="number" value={priceFrom} onChange={e => setPriceFrom(e.target.value)} sx={{ width: 120 }} />
+                    <Typography color="text.secondary">—</Typography>
+                    <TextField size="small" placeholder="До" type="number" value={priceTo} onChange={e => setPriceTo(e.target.value)} sx={{ width: 120 }} />
 
-            <Collapse in={showFilters}>
-                <Paper elevation={0} sx={{ p: 3, mb: 4, bgcolor: '#f1f5f9', borderRadius: 2, border: '1px solid #e2e8f0' }}>
-                    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3, alignItems: 'center' }}>
-                        <TextField
-                            fullWidth size="small" label="Поиск по названию..."
-                            variant="outlined" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                            InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }}
-                            sx={{ flex: 1.5 }}
-                        />
-                        <FormControl fullWidth size="small" sx={{ flex: 1 }}>
-                            <InputLabel>Производитель</InputLabel>
-                            <Select value={filterMan} label="Производитель" onChange={e => setFilterMan(e.target.value)}>
-                                <MenuItem value=""><em>Все</em></MenuItem>
-                                {manufacturers.map(m => <MenuItem key={m.id} value={m.name}>{m.name}</MenuItem>)}
-                            </Select>
-                        </FormControl>
-                        <FormControl fullWidth size="small" sx={{ flex: 1 }}>
-                            <InputLabel>Тип позиции</InputLabel>
-                            <Select value={filterType} label="Тип позиции" onChange={e => setFilterType(e.target.value)}>
-                                <MenuItem value=""><em>Все</em></MenuItem>
-                                {itemTypes.map(t => <MenuItem key={t.id} value={t.name}>{t.name}</MenuItem>)}
-                            </Select>
-                        </FormControl>
-                        <Button variant="text" color="secondary" sx={{ flex: 0.5, minWidth: '100px' }} onClick={() => {
-                            setSearchQuery(''); setFilterMan(''); setFilterType('');
-                        }}>Сбросить</Button>
-                    </Box>
-                </Paper>
-            </Collapse>
+                    {(searchQuery || filterMan || filterType || priceFrom || priceTo) && (
+                        <Button variant="text" color="secondary" sx={{ ml: 'auto' }} onClick={() => {
+                            setSearchQuery(''); setFilterMan(''); setFilterType(''); setPriceFrom(''); setPriceTo('');
+                        }}>Сбросить фильтры</Button>
+                    )}
+                </Box>
+            </Paper>
 
             {filteredItems.length === 0 ? (
-                <Typography variant="h6" color="text.secondary" textAlign="center" sx={{ mt: 5 }}>
-                    Ничего не найдено!
-                </Typography>
+                <Box sx={{ textAlign: 'center', py: 8, bgcolor: '#ffffff', borderRadius: 4 }}>
+                    <Typography variant="h6" color="text.secondary">
+                        Ничего не найдено
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                        Попробуйте изменить параметры фильтрации
+                    </Typography>
+                </Box>
             ) : (
-                <Grid container spacing={3}>
-                    {filteredItems.map(item => (
-                        <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={item.id}>
-                            <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', transition: '0.2s', '&:hover': { transform: 'translateY(-4px)', boxShadow: 4 } }}>
-                                <CardMedia
-                                    component="img"
-                                    height="200"
-                                    image={item.photoUrl || 'https://via.placeholder.com/300x200?text=Нет+фото'}
-                                    alt={item.model}
-                                    sx={{ objectFit: 'contain', p: 2, bgcolor: '#f8fafc' }}
-                                />
-                                <CardContent sx={{ flexGrow: 1 }}>
-                                    <Typography gutterBottom variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
-                                        {item.model}
-                                    </Typography>
-
-                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                                        <Chip size="small" label={item.manufacturer} color="primary" variant="outlined" />
-                                        <Chip size="small" label={item.itemType} color="secondary" variant="outlined" />
-                                        <Chip size="small" label={item.country} variant="outlined" />
-                                    </Box>
-
-                                    <Typography variant="h6" color="primary.main">
-                                        {item.price.toLocaleString('ru-RU')} ₽
-                                    </Typography>
-                                </CardContent>
-                                <CardActions sx={{ justifyContent: 'space-between', px: 2, pb: 2 }}>
-                                    <Button size="small" startIcon={<EditIcon />} onClick={() => alert("Редактирование пока в разработке!")}>
-                                        Изменить
-                                    </Button>
-                                    <Button size="small" color="error" startIcon={<DeleteIcon />} onClick={() => handleDelete(item.id)}>
-                                        Удалить
-                                    </Button>
-                                </CardActions>
-                            </Card>
-                        </Grid>
-                    ))}
-                </Grid>
+                <TableContainer component={Paper} elevation={0} sx={{ borderRadius: 4, overflow: 'hidden' }}>
+                    <Table sx={{ minWidth: 800 }}>
+                        <TableHead sx={{ bgcolor: '#F4F7FE' }}>
+                            <TableRow>
+                                <TableCell sx={{ color: 'text.secondary', fontWeight: 700, fontSize: '0.75rem', py: 2 }}>ТЕХНИКА</TableCell>
+                                <TableCell sx={{ color: 'text.secondary', fontWeight: 700, fontSize: '0.75rem', py: 2 }}>ТИП</TableCell>
+                                <TableCell sx={{ color: 'text.secondary', fontWeight: 700, fontSize: '0.75rem', py: 2 }}>ПРОИЗВОДИТЕЛЬ</TableCell>
+                                <TableCell sx={{ color: 'text.secondary', fontWeight: 700, fontSize: '0.75rem', py: 2 }}>СТРАНА</TableCell>
+                                <TableCell sx={{ color: 'text.secondary', fontWeight: 700, fontSize: '0.75rem', py: 2 }}>ЦЕНА</TableCell>
+                                <TableCell sx={{ color: 'text.secondary', fontWeight: 700, fontSize: '0.75rem', py: 2 }}>СОЗДАНО / ОБНОВЛЕНО</TableCell>
+                                <TableCell align="right" sx={{ color: 'text.secondary', fontWeight: 700, fontSize: '0.75rem', py: 2 }}>ДЕЙСТВИЯ</TableCell>
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {filteredItems.map(item => (
+                                <TableRow key={item.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                                    <TableCell sx={{ py: 2 }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                            <Box
+                                                component="img"
+                                                src={item.photoUrl || 'https://via.placeholder.com/60?text=Нет'}
+                                                sx={{ width: 50, height: 50, borderRadius: 2, objectFit: 'cover', bgcolor: '#f1f5f9' }}
+                                            />
+                                            <Box>
+                                                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary' }}>
+                                                    {item.model}
+                                                </Typography>
+                                                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                                    ID: {item.id.substring(0, 10)}
+                                                </Typography>
+                                            </Box>
+                                        </Box>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Chip label={item.itemType} size="small" sx={{ bgcolor: 'primary.light', color: 'primary.dark', fontWeight: 600, borderRadius: 1.5 }} />
+                                    </TableCell>
+                                    <TableCell>
+                                        <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                                            {item.manufacturer}
+                                        </Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Typography variant="body2" sx={{ color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                            🌐 {item.country}
+                                        </Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'text.primary' }}>
+                                            {item.price.toLocaleString('ru-RU')} ₽
+                                        </Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                                            Создано: {formatDate(item.createdAt)}
+                                        </Typography>
+                                        <Typography variant="caption" sx={{ color: 'text.disabled', display: 'block' }}>
+                                            Изменено: {formatDate(item.updatedAt) === 'Нет данных' ? 'никогда' : formatDate(item.updatedAt)}
+                                        </Typography>
+                                    </TableCell>
+                                    <TableCell align="right">
+                                        <IconButton color="primary" onClick={() => handleOpenEdit(item)}>
+                                            <EditIcon fontSize="small" />
+                                        </IconButton>
+                                        <IconButton color="error" onClick={() => handleDelete(item.id)}>
+                                            <DeleteIcon fontSize="small" />
+                                        </IconButton>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </TableContainer>
             )}
 
 
             <Dialog open={openAddModal} onClose={() => setOpenAddModal(false)} maxWidth="sm" fullWidth>
-                <DialogTitle sx={{ fontWeight: 'bold', color: 'primary.dark' }}>Добавление новой позиции</DialogTitle>
+                <DialogTitle sx={{ fontWeight: 'bold', color: 'primary.dark' }}>
+                    {editingItemId ? 'Редактирование техники' : 'Добавление новой техники'}
+                </DialogTitle>
                 <form onSubmit={handleCreateItem}>
                     <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
 
@@ -249,8 +359,8 @@ export default function ItemsList() {
                         </FormControl>
 
                         <FormControl required fullWidth>
-                            <InputLabel>Тип позиции</InputLabel>
-                            <Select value={newItem.itemTypeId} label="Тип позиции"
+                            <InputLabel>Тип техники</InputLabel>
+                            <Select value={newItem.itemTypeId} label="Тип техники"
                                 onChange={e => setNewItem({ ...newItem, itemTypeId: e.target.value })}>
                                 {itemTypes.map(t => <MenuItem key={t.id} value={t.id}>{t.name}</MenuItem>)}
                             </Select>
@@ -276,7 +386,9 @@ export default function ItemsList() {
                     </DialogContent>
                     <DialogActions sx={{ px: 3, py: 2 }}>
                         <Button onClick={() => setOpenAddModal(false)} color="inherit">Отмена</Button>
-                        <Button type="submit" variant="contained" color="primary">Сохранить товар</Button>
+                        <Button type="submit" variant="contained" color="primary">
+                            {editingItemId ? 'Сохранить изменения' : 'Сохранить технику'}
+                        </Button>
                     </DialogActions>
                 </form>
             </Dialog>

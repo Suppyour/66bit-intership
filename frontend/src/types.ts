@@ -6,6 +6,8 @@ export interface ItemDto {
     manufacturer: string;
     itemType: string;
     country: string;
+    createdAt: string;
+    updatedAt: string | null;
 }
 
 export interface CreateItemDto {
@@ -22,15 +24,21 @@ export interface ItemTypeDto {
     id: string;
     name: string;
     description: string;
+    createdAt: string;
+    updatedAt: string | null;
 }
 
 export interface ManufacturerDto {
     id: string;
     name: string;
     description: string;
+    createdAt: string;
+    updatedAt: string | null;
 }
 
 export interface CountryDto {
     id: string;
     name: string;
+    createdAt: string;
+    updatedAt: string | null;
 }

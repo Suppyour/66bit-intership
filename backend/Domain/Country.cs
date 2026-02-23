@@ -1,7 +1,6 @@
 namespace Domain;
 
-public record Country
+public class Country : BaseEntity
 {
-    public Guid Id { get; set; }
     public string Name { get; set; }
 }

@@ -28,6 +28,7 @@ public class AppDbContext : DbContext
                 entry.Entity.ModifiedDate = DateTime.UtcNow;
             }
         }
+
         return base.SaveChangesAsync(cancellationToken);
     }
 }

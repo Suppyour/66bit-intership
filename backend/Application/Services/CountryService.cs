@@ -31,7 +31,9 @@ public class CountryService : ICountryService
 
         var dtos = countries.Select(c => new CountryDto(
             c.Id,
-            c.Name
+            c.Name,
+            c.CreatedDate,
+            c.ModifiedDate
         )).ToList();
 
         return dtos;
@@ -63,7 +65,9 @@ public class CountryService : ICountryService
 
         return new CountryDto(
             c.Id,
-            c.Name
+            c.Name,
+            c.CreatedDate,
+            c.ModifiedDate
         );
     }
 }

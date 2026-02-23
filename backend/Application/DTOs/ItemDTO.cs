@@ -7,5 +7,7 @@ public record ItemDto(
     decimal Price,
     string Manufacturer,
     string ItemType,
-    string Country
+    string Country,
+    DateTime CreatedAt,
+    DateTime? UpdatedAt
 );

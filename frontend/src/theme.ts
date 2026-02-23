@@ -3,56 +3,106 @@ import { createTheme } from '@mui/material/styles';
 const theme = createTheme({
     palette: {
         primary: {
-            main: '#8eacbb',
-            light: '#c0dfef',
-            dark: '#5f7d8c',
+            main: '#4318FF', // Насыщенный синий из макета
+            light: '#E9E3FF',
+            dark: '#2B0EAA',
             contrastText: '#fff',
         },
         secondary: {
-            main: '#f48fb1',
-            light: '#ffc1e3',
-            dark: '#bf5f82',
+            main: '#A3AED0', // Серый текст/иконки
+            light: '#F4F7FE',
+            dark: '#707EAE',
             contrastText: '#fff',
         },
         background: {
-            default: '#f8fafc',
+            default: '#F4F7FE', // Очень светло-серый/голубоватый фон страницы
             paper: '#ffffff',
         },
+        text: {
+            primary: '#2B3674', // Темно-синий текст заголовков и важных элементов
+            secondary: '#A3AED0',
+        }
     },
     typography: {
-        fontFamily: '"Nunito", "Roboto", "Helvetica", "Arial", sans-serif',
+        fontFamily: [
+            '"Inter"',
+            '"Roboto"',
+            '"Helvetica"',
+            '"Arial"',
+            'sans-serif'
+        ].join(','),
         h4: {
-            fontWeight: 600,
-            color: '#334155',
+            fontWeight: 700,
+            color: '#2B3674',
         },
         h6: {
-            fontWeight: 600,
+            fontWeight: 700,
         },
+        button: {
+            textTransform: 'none',
+            fontWeight: 600,
+        }
     },
     shape: {
-        borderRadius: 12,
+        borderRadius: 16, // Округлые элементы
     },
     components: {
         MuiButton: {
             styleOverrides: {
                 root: {
-                    textTransform: 'none',
-                    fontWeight: 600,
+                    borderRadius: 10,
                     boxShadow: 'none',
                     '&:hover': {
-                        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+                        boxShadow: '0px 4px 12px rgba(67, 24, 255, 0.2)',
                     },
                 },
+                contained: {
+                    padding: '8px 24px',
+                }
             },
         },
         MuiCard: {
             styleOverrides: {
                 root: {
-                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05)',
-                    border: '1px solid #e2e8f0',
-                },
-            },
+                    borderRadius: 20,
+                    boxShadow: '0px 18px 40px rgba(112, 144, 176, 0.12)',
+                    border: 'none',
+                }
+            }
         },
+        MuiPaper: {
+            styleOverrides: {
+                root: {
+                    borderRadius: 20,
+                    boxShadow: '0px 18px 40px rgba(112, 144, 176, 0.12)',
+                }
+            }
+        },
+        MuiDrawer: {
+            styleOverrides: {
+                paper: {
+                    borderRight: 'none',
+                    boxShadow: '14px 17px 40px 4px rgba(112, 144, 176, 0.08)',
+                }
+            }
+        },
+        MuiOutlinedInput: {
+            styleOverrides: {
+                root: {
+                    borderRadius: 16,
+                    backgroundColor: '#F8F9FA',
+                    '& fieldset': {
+                        border: 'none',
+                    },
+                    '&:hover fieldset': {
+                        border: 'none',
+                    },
+                    '&.Mui-focused fieldset': {
+                        border: '1px solid #4318FF',
+                    },
+                }
+            }
+        }
     },
 });
 

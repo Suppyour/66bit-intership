@@ -53,7 +53,8 @@ public class ItemService : IItemService
         if (i == null) return null;
         return new ItemDto(
             i.Id, i.PhotoUrl, i.Model, i.Price,
-            i.Manufacturer.Name, i.ItemType.Name, i.Country.Name
+            i.Manufacturer.Name, i.ItemType.Name, i.Country.Name,
+            i.CreatedDate, i.ModifiedDate
         );
     }
     public async Task UpdateItemAsync(Guid id, CreateItemDto dto)
@@ -83,7 +84,9 @@ public class ItemService : IItemService
             i.Price,
             i.Manufacturer.Name,
             i.ItemType.Name,
-            i.Country.Name
+            i.Country.Name,
+            i.CreatedDate,
+            i.ModifiedDate
         )).ToList();
 
         return dtos;

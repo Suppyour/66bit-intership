@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: store_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: 66bitstore
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: store_backend
+    ports:
+      - "5020:5020"
+    environment:
+      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=66bitstore;Username=postgres;Password=1234
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: store_frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  db-data:
