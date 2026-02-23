@@ -1,0 +1,27 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main # Пайплайн запускается при каждом пуше в ветку main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}     # IP твоего VPS
+          username: ${{ secrets.SERVER_USER }} # Обычно root
+          password: ${{ secrets.SERVER_PASS }} # Пароль от VPS
+          script: |
+            # Переходим в папку проекта
+            cd /root/66bit-intership
+            
+            # Скачиваем свежие изменения
+            git pull origin main
+            
+            # Пересобираем и перезапускаем Docker-контейнеры
+            docker compose up -d --build
