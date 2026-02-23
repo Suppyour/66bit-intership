@@ -3,23 +3,23 @@ import { createTheme } from '@mui/material/styles';
 const theme = createTheme({
     palette: {
         primary: {
-            main: '#4318FF', // Насыщенный синий из макета
+            main: '#4318FF',
             light: '#E9E3FF',
             dark: '#2B0EAA',
             contrastText: '#fff',
         },
         secondary: {
-            main: '#A3AED0', // Серый текст/иконки
+            main: '#A3AED0',
             light: '#F4F7FE',
             dark: '#707EAE',
             contrastText: '#fff',
         },
         background: {
-            default: '#F4F7FE', // Очень светло-серый/голубоватый фон страницы
+            default: '#F4F7FE',
             paper: '#ffffff',
         },
         text: {
-            primary: '#2B3674', // Темно-синий текст заголовков и важных элементов
+            primary: '#2B3674',
             secondary: '#A3AED0',
         }
     },
@@ -44,7 +44,7 @@ const theme = createTheme({
         }
     },
     shape: {
-        borderRadius: 16, // Округлые элементы
+        borderRadius: 16,
     },
     components: {
         MuiButton: {

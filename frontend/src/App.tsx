@@ -8,7 +8,6 @@ import ViewInArIcon from '@mui/icons-material/ViewInAr';
 
 const DRAWER_WIDTH = 280;
 
-// Выделяем пустую функцию навигации в отдельный компонент для использования useLocation
 function AppContent() {
   const location = useLocation();
 
@@ -19,7 +18,6 @@ function AppContent() {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      {/* Левый Sidebar */}
       <Drawer
         variant="permanent"
         sx={{
@@ -77,7 +75,6 @@ function AppContent() {
         </List>
       </Drawer>
 
-      {/* Основной контент */}
       <Box
         component="main"
         sx={{

@@ -55,13 +55,13 @@ export default function ItemsList() {
         loadDictionaries();
 
         const connection = new signalR.HubConnectionBuilder()
-            .withUrl("http://localhost:5020/hubs/store")
+            .withUrl("/hubs/store")
             .withAutomaticReconnect()
             .build();
 
         connection.on("ReceiveMessage", (message) => {
             console.log("SignalR Message:", message);
-            loadItems(); // Перезагружаем список техники при получении уведомления
+            loadItems();
         });
 
         connection.start()
@@ -213,7 +213,6 @@ export default function ItemsList() {
                     <FormControl fullWidth size="small" sx={{ flex: 1 }}>
                         <Select displayEmpty value={filterMan} onChange={e => setFilterMan(e.target.value)} sx={{ color: filterMan ? 'text.primary' : 'text.secondary' }}>
                             <MenuItem value="">Все производители</MenuItem>
-                            {/* Сужающийся фильтр: если выбран фильтр по типу (filterType), оставляем только тех производителей, которые есть у этого типа в общем списке */}
                             {manufacturers.filter(m => {
                                 if (!filterType) return true;
                                 return items.some(item => item.itemType === filterType && item.manufacturer === m.name);
@@ -223,7 +222,6 @@ export default function ItemsList() {
                     <FormControl fullWidth size="small" sx={{ flex: 1 }}>
                         <Select displayEmpty value={filterType} onChange={e => setFilterType(e.target.value)} sx={{ color: filterType ? 'text.primary' : 'text.secondary' }}>
                             <MenuItem value="">Все типы техники</MenuItem>
-                            {/* Сужающийся фильтр: если выбран фильтр по производителю (filterMan), оставляем только те ItemTypes, которые есть у этого производителя в общем списке items, иначе показываем все */}
                             {itemTypes.filter(t => {
                                 if (!filterMan) return true;
                                 return items.some(item => item.manufacturer === filterMan && item.itemType === t.name);

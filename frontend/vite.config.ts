@@ -4,10 +4,9 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: true, // Это то, что мы писали ранее
+    host: true,
     port: 5173
   },
-  // ВОТ ЭТА НАСТРОЙКА РЕШАЕТ НАШУ ПРОБЛЕМУ С MUI:
   optimizeDeps: {
     include: ['@mui/material', '@mui/icons-material', '@emotion/react', '@emotion/styled']
   }
