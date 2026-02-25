@@ -37,7 +37,7 @@ function AppContent() {
             <ViewInArIcon />
           </Avatar>
           <Typography variant="h5" sx={{ fontWeight: 800, color: 'text.primary', letterSpacing: '-0.5px' }}>
-            СкладПро
+            Склад66bit
           </Typography>
         </Box>
 
