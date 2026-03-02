@@ -3,7 +3,7 @@ import type { FormEvent } from 'react';
 import api from '../api';
 import type { ItemDto, ManufacturerDto, CountryDto, ItemTypeDto, CreateItemDto } from '../types';
 import {
-    Typography, Box, CircularProgress, Chip,
+    Typography, Box, CircularProgress, Chip, Alert,
     Button, Dialog, DialogTitle, DialogContent,
     DialogActions, TextField, MenuItem, FormControl, InputLabel, Select, InputAdornment,
     Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton
@@ -13,6 +13,25 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import * as signalR from '@microsoft/signalr';
 import SearchIcon from '@mui/icons-material/Search';
+import { IMaskInput } from 'react-imask';
+import { forwardRef } from 'react';
+
+const PriceMaskCustom = forwardRef<HTMLInputElement, any>(
+    function PriceMaskCustom(props, ref) {
+        const { onChange, ...other } = props;
+        return (
+            <IMaskInput
+                {...other}
+                mask={Number}
+                scale={0}
+                thousandsSeparator=" "
+                inputRef={ref}
+                onAccept={(value: any) => onChange({ target: { name: props.name, value } })}
+                overwrite
+            />
+        );
+    },
+);
 
 export default function ItemsList() {
     const [items, setItems] = useState<ItemDto[]>([]);
@@ -27,6 +46,7 @@ export default function ItemsList() {
     const [openAddModal, setOpenAddModal] = useState(false);
     const [editingItemId, setEditingItemId] = useState<string | null>(null);
     const [openInlineCountryModal, setOpenInlineCountryModal] = useState(false);
+    const [submitError, setSubmitError] = useState<string | null>(null);
 
 
 
@@ -61,7 +81,7 @@ export default function ItemsList() {
 
         connection.on("ReceiveMessage", (message) => {
             console.log("SignalR Message:", message);
-            loadItems();
+            loadItems(true);
         });
 
         connection.start()
@@ -73,15 +93,15 @@ export default function ItemsList() {
         };
     }, []);
 
-    const loadItems = async () => {
-        setLoading(true);
+    const loadItems = async (isBackground = false) => {
+        if (!isBackground) setLoading(true);
         try {
             const response = await api.get('/item');
             setItems(response.data);
         } catch (error) {
             console.error("Ошибка при загрузке позиций:", error);
         } finally {
-            setLoading(false);
+            if (!isBackground) setLoading(false);
         }
     };
 
@@ -115,6 +135,7 @@ export default function ItemsList() {
         const countryId = countries.find(c => c.name === item.country)?.id || '';
 
         setEditingItemId(item.id);
+        setSubmitError(null);
         setNewItem({
             model: item.model,
             photoUrl: item.photoUrl,
@@ -156,7 +177,7 @@ export default function ItemsList() {
             await loadItems();
         } catch (error) {
             console.error("Ошибка при сохранении позиции:", error);
-            alert("Не удалось сохранить позицию. Проверьте заполнение всех полей.");
+            setSubmitError("Ошибка сохранения. Убедитесь, что все поля заполнены корректно и сервер доступен.");
         }
     };
 
@@ -194,6 +215,7 @@ export default function ItemsList() {
                 </Typography>
                 <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={() => {
                     setEditingItemId(null);
+                    setSubmitError(null);
                     setNewItem({ model: '', photoUrl: '', price: 0, manufacturerId: '', itemTypeId: '', countryId: '' });
                     setInlineCountryName('');
                     setOpenAddModal(true);
@@ -336,6 +358,7 @@ export default function ItemsList() {
                 </DialogTitle>
                 <form onSubmit={handleCreateItem}>
                     <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                        {submitError && <Alert severity="error">{submitError}</Alert>}
 
                         <TextField required label="Модель (Название)" fullWidth value={newItem.model}
                             onChange={e => setNewItem({ ...newItem, model: e.target.value })} />
@@ -343,9 +366,12 @@ export default function ItemsList() {
                         <TextField label="Ссылка на фото (URL)" fullWidth value={newItem.photoUrl}
                             onChange={e => setNewItem({ ...newItem, photoUrl: e.target.value })} />
 
-                        <TextField required label="Цена" type="number" fullWidth value={newItem.price}
-                            onChange={e => setNewItem({ ...newItem, price: Number(e.target.value) })}
-                            InputProps={{ startAdornment: <InputAdornment position="start">₽</InputAdornment> }} />
+                        <TextField required label="Цена" fullWidth value={newItem.price || ''}
+                            onChange={e => setNewItem({ ...newItem, price: Number(e.target.value.replace(/\s/g, '')) })}
+                            InputProps={{
+                                startAdornment: <InputAdornment position="start">₽</InputAdornment>,
+                                inputComponent: PriceMaskCustom as any
+                            }} />
 
 
                         <FormControl required fullWidth>

@@ -5,7 +5,7 @@ import type { ManufacturerDto, CountryDto, ItemTypeDto } from '../types';
 import {
     Typography, Box, Card, CardContent, CardHeader,
     TextField, Button, List, ListItem, ListItemText,
-    Divider, IconButton
+    Divider, IconButton, Alert, Snackbar
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -17,6 +17,7 @@ export default function Dictionaries() {
     const [manufacturers, setManufacturers] = useState<ManufacturerDto[]>([]);
     const [countries, setCountries] = useState<CountryDto[]>([]);
     const [itemTypes, setItemTypes] = useState<ItemTypeDto[]>([]);
+    const [error, setError] = useState<string | null>(null);
 
     const [newCountryName, setNewCountryName] = useState('');
     const [newManName, setNewManName] = useState('');
@@ -40,6 +41,7 @@ export default function Dictionaries() {
             setItemTypes(typesRes.data);
         } catch (error) {
             console.error("Ошибка при загрузке справочников:", error);
+            setError("Не удалось загрузить данные. Проверьте подключение к серверу.");
         }
     };
 
@@ -71,16 +73,21 @@ export default function Dictionaries() {
             await loadData();
         } catch (error) {
             console.error("Ошибка при удалении страны:", error);
+            setError("Ошибка удаления. Возможно, страна используется в существующих товарах.");
         }
     };
 
     const handleAddManufacturer = async (e: FormEvent) => {
         e.preventDefault();
         if (!newManName) return;
-        await api.post('/manufacturer', { name: newManName, description: newManDesc });
-        setNewManName('');
-        setNewManDesc('');
-        await loadData();
+        try {
+            await api.post('/manufacturer', { name: newManName, description: newManDesc });
+            setNewManName('');
+            setNewManDesc('');
+            await loadData();
+        } catch (err) {
+            setError("Ошибка при добавлении производителя.");
+        }
     };
 
     const handleUpdateManufacturer = async () => {
@@ -140,6 +147,12 @@ export default function Dictionaries() {
             <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 4 }}>
                 Здесь вы можете управлять вспомогательными данными: производителями, странами и типами позиций.
             </Typography>
+
+            <Snackbar open={!!error} autoHideDuration={6000} onClose={() => setError(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+                <Alert onClose={() => setError(null)} severity="error" sx={{ width: '100%' }}>
+                    {error}
+                </Alert>
+            </Snackbar>
 
             <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4 }}>
 
